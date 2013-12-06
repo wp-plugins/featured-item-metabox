@@ -8,6 +8,7 @@ class Featured_Items_Metabox {
 
 	public $taxonomy = null;
 	public $type_obj = null;
+	public $type = null;
 
 	public function __construct( $type ){
 
@@ -32,7 +33,7 @@ class Featured_Items_Metabox {
 		add_action( 'quick_edit_custom_box', array( $this, 'quick_edit_custom_box' ), 10, 2);
 
 		//add quick edit scripts
-      add_action( 'admin_enqueue_scripts', array( $this, 'admin_script' ) );
+ 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_script' ) );
 
 
 	}
@@ -53,10 +54,9 @@ class Featured_Items_Metabox {
 	 * @since 1.0
 	 */
 	public function add_meta_box() {
-
 		if( ! is_wp_error( $this->type_obj ) ):
 			$label = __( 'Featured Item', 'featured-items-metabox' );
-			add_meta_box( '_featured_metabox', $label ,array( $this,'metabox' ), $type->name ,'side','high' );
+			add_meta_box( '_featured_metabox', $label, array( $this,'metabox' ), $this->type,'side','high' );
 		endif;
 	}
 
@@ -91,10 +91,15 @@ class Featured_Items_Metabox {
 	function save_meta ( $post_id ) {
 
 		// make sure we're on a supported post type
-	    if ( is_array( $this->type_obj->object_type ) && isset( $_POST['post_type'] ) && ! array_key_exists( $_POST['post_type'], $this->type_obj->object_type ) ) return;
+		$options = get_option('featured_items_metabox_options', false);
+	    $types = isset($options['types']) ? $options['types'] : array();
+
+		if ( ! isset( $_POST['post_type'] ) || ! in_array( $_POST['post_type'], $types ) )
+			return;
 
     	// verify this came from our plugin
-	 	if ( ! isset( $_POST["_featured_nonce"]) && ! wp_verify_nonce( $_POST["_featured_nonce"], "featured_nonce" ) ) return;
+	 	if ( ! isset( $_POST['_featured_nonce'] ) || ! wp_verify_nonce( $_POST['_featured_nonce'], 'featured_nonce' ) ) 
+	 		return;
 
 	  	// verify if this is an auto save routine. If it is our form has not been submitted, so we dont want to do anything
 	  	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE )
@@ -102,18 +107,19 @@ class Featured_Items_Metabox {
 
 	  	// Check permissions
 	  	if ( 'page' == $_POST['post_type'] ) {
-	    	if ( ! current_user_can( 'edit_page', $post_id ) ) return;
+	    	if ( ! current_user_can( 'edit_page', $post_id ) ) 
+	    		return;
 	  	} else {
-	    	if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+	    	if ( ! current_user_can( 'edit_post', $post_id ) ) 
+	    		return;
 	  	}
 
 	  	// OK, we're authenticated: we need to find and save the data
-	  	if ( isset ( $_POST["featured"] ) && 1 == $_POST["featured"] ) {
+	  	if ( isset ( $_POST['featured'] ) && 1 == $_POST['featured'] )
 	  		update_post_meta( $post_id, '_featured', 'yes' );
-	  	} else {
+	  	else
 	  		update_post_meta( $post_id, '_featured', 'no' );
-	  	}
-
+	  	
 		return $post_id;
 	}
 
@@ -158,13 +164,14 @@ class Featured_Items_Metabox {
 		$featured = get_post_meta( $post_id, '_featured', true );
 
 		if ( $featured == 'yes' )
-			update_post_meta( $post_id, '_featured', 'no');
+			update_post_meta( $post_id, '_featured', 'no' );
 		else
-			update_post_meta( $post_id, '_featured', 'yes');
+			update_post_meta( $post_id, '_featured', 'yes' );
 
 		// redirect back to where we came from
 		wp_safe_redirect( remove_query_arg( array('trashed', 'untrashed', 'deleted', 'ids'), wp_get_referer() ) );
 
+		die();
 	}
 
 
@@ -210,7 +217,7 @@ class Featured_Items_Metabox {
 		switch ( $column ) {
 			case "featured":
 
-				$ajax_url = add_query_arg( array('action' => 'featured_items_quickedit',
+				$ajax_url = add_query_arg( array( 'action' => 'featured_items_quickedit',
 									'featured_id' => $post_id,
 									'post_type' => $this->type ), admin_url('admin-ajax.php') );
 
@@ -238,7 +245,6 @@ class Featured_Items_Metabox {
 
 	function register_sortable( $columns ) {
 	    $columns['featured'] = 'featured';
-
 	    return $columns;
 	}
 
@@ -265,6 +271,8 @@ class Featured_Items_Metabox {
 	 */
 	function quick_edit_custom_box( $column_name, $screen ) {
 		if ( $screen != $this->type || $column_name != 'featured' ) return false;
+
+		global $post; 
 
 	    //needs the same name as metabox nonce
 	    wp_nonce_field( 'featured_nonce', '_featured_nonce' );
@@ -303,7 +311,8 @@ class Featured_Items_Metabox {
     	$screen = get_current_screen();
     	$options = get_option('featured_items_metabox_options', false);
 
-    	if ( $screen->base != "edit" ||  ! isset( $options['types'] ) || ! in_array( $screen->post_type, $options ) ) return;
+    	if ( $screen->base != "edit" ||  ! isset( $options['types'] ) || ! in_array( $screen->post_type, $options ) ) 
+    		return;
 
       wp_enqueue_script( 'featured-item', plugins_url( 'js/featureditem.js', dirname(__FILE__) ), array( 'jquery' ), null, true );
 
