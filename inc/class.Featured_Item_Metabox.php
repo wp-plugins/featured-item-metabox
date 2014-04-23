@@ -44,6 +44,7 @@ class Featured_Item_Metabox {
 
 		//save featured meta
 		add_action( 'save_post', array( $this, 'save_meta' ) );
+		add_action( 'edit_attachment', array( $this, 'save_meta' ) );
 
 		//add to quick edit - irrelevant for wp 3.4.2
 		add_action( 'quick_edit_custom_box', array( $this, 'quick_edit_custom_box' ), 10, 2);
@@ -73,7 +74,7 @@ class Featured_Item_Metabox {
 	 */
 	public function add_meta_box() {
 		if( ! is_wp_error( $this->type_obj ) ):
-			$label = __( 'Featured Item', 'featured-items-metabox' );
+			$label = apply_filters( 'featured_items_metabox_label', sprintf( __( 'Featured %s', 'featured-items-metabox' ), $this->type_obj->labels->singular_name ), $this->type );
 			add_meta_box( '_featured_metabox', $label, array( $this,'metabox' ), $this->type, 'side', 'high' );
 		endif;
 	}
@@ -93,7 +94,7 @@ class Featured_Item_Metabox {
 
 		?>
 		<div id="featured-items">
-			<input type="checkbox" name="featured" class="featured-item" id="featured-item" value="1" <?php checked( 'yes', $featured );?> /> <label for="featured-item"><?php _e('Featured', 'featured-items-metabox');?></label>
+			<input type="checkbox" name="featured" class="featured-item" id="featured-item" value="1" <?php checked( 'yes', $featured );?> /> <label for="featured-item"><?php echo apply_filters( 'featured_items_checkbox_label', __( 'Featured', 'featured-items-metabox' ), $this->type );?></label>
 
 			<br>
 		</div>
@@ -206,15 +207,19 @@ class Featured_Item_Metabox {
 	 */
 	public function add_columns_init() {
 
-		$screen = get_current_screen();
-
-		if ( isset( $screen->base ) && 'edit' != $screen->base ) return;
-
-			//add some hidden data that we'll need for the quickedit
+		// set up the columns
+		// the attachment post type using a different naming structure
+		if( $this->type == 'attachment' ) {
+			add_filter( "manage_media_columns", array( $this, 'add_column' ) );
+			add_action( "manage_media_custom_column", array( $this, 'custom_column' ), 99, 2);
+			add_filter( "manage_upload_sortable_columns", array( $this, 'register_sortable' ) );
+		} else {
 			add_filter( "manage_{$this->type}_posts_columns", array( $this, 'add_column' ) );
 			add_action( "manage_{$this->type}_posts_custom_column", array( $this, 'custom_column' ), 99, 2);
 			add_filter( "manage_edit-{$this->type}_sortable_columns", array( $this, 'register_sortable' ) );
-			add_filter( 'request', array( $this, 'column_orderby' ) );
+		}
+
+		add_filter( 'request', array( $this, 'column_orderby' ) );
 
 	}
 
@@ -349,7 +354,9 @@ class Featured_Item_Metabox {
     	if ( $screen->base != "edit" ||  ! isset( $options['types'] ) || ! in_array( $screen->post_type, $options ) ) 
     		return;
 
-      wp_enqueue_script( 'featured-item', plugins_url( 'js/featureditem.js', dirname(__FILE__) ), array( 'jquery' ), null, true );
+    	$suffix = defined( WP_SCRIPT_DEBUG )  && WP_SCRIPT_DEBUG ? '' : '.min';
+
+		wp_enqueue_script( 'featured-item', plugins_url( 'js/featureditem' . $suffix . '.js', dirname(__FILE__) ), array( 'jquery' ), null, true );
 
     }
 

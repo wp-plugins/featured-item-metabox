@@ -3,8 +3,8 @@ Contributors: helgatheviking
 Donate link: https://inspirepay.com/pay/helgatheviking
 Tags: metabox, featured
 Requires at least: 3.8
-Tested up to: 3.8
-Stable tag: 1.2.1
+Tested up to: 3.9
+Stable tag: 1.2.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,6 +140,13 @@ Please report any bugs, errors, warnings, code problems at [Github](https://gith
 3. The metabox when editing an individual post
 
 == Changelog ==
+
+= 1.2.3 =
+* add featured_items_metabox_label filter
+* add featured_items_checkbox_label filter
+
+= 1.2.2 =
+* make plugin work on media attachments
 
 = 1.2.1 =
 * Fixing file rename
